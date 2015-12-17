@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <_name>Path to NC</_name>
+  <id>org.lunatech.heidengrave.path_to_nc</id>
+  <dependency type="executable" location="extensions">Heidengrave/heidengrave_pathtonc.py</dependency>
+  <dependency type="executable" location="extensions">inkex.py</dependency>
+  <param name="zsafe" type="float" min="0.0" max="100.0" precision="3" _gui-text="ZSafe">0.2</param>
+  <param name="depth" type="float" min="-100.0" max="0.0" precision="3" _gui-text="Cutting depth">-0.3</param>
+  <param name="feed" type="int" min="1" max="6000" _gui-text="Feed">30</param>
+  <param name="sortby" type="optiongroup" _gui-text="Sort by">
+  	<_option value="X">X</_option>
+  	<_option value="Y">Y</_option>
+  </param>
+  <param name="rotary" type="boolean" _gui-text="Rotary">false</param>
+  <param name="rotary-dia" type="float" min="1.0" max="500.0" precision="2" _gui-text="Wheel diameter">60.0</param>
+  <param name="groove" type="boolean" _gui-text="Groove">false</param>
+  <param name="groove-offset" type="float" min="0.0" max="50.0" precision="3" _gui-text="Groove YZ Offset">1.5</param>
+  <param name="groove-radius" type="float" min="0.1" max="20.0" precision="3" _gui-text="Groove radius">1.5</param>
+  <effect>
+    <object-type>all</object-type>
+    <effects-menu>
+       <submenu _name="Heidengrave"/>
+    </effects-menu>
+  </effect>
+  <script>
+    <command reldir="extensions" interpreter="python">Heidengrave/heidengrave_pathtonc.py</command>
+  </script>
+</inkscape-extension>

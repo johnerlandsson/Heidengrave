@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <_name>Prepare curves</_name>
+  <id>org.lunatech.heidengrave.prepare_curves</id>
+  <dependency type="executable" location="extensions">Heidengrave/heidengrave_prep.py</dependency>
+  <dependency type="executable" location="extensions">inkex.py</dependency>
+  <param name="split-segments" type="boolean" _gui-text="Split segments">false</param>
+  <param name="max-length" type="float" _gui-text="Max segment length">0.2</param>
+  <param name="curve-precision" type="float" _gui-text="Curve smoothness">10.0</param>
+  <effect>
+    <object-type>all</object-type>
+    <effects-menu>
+       <submenu _name="Heidengrave"/>
+    </effects-menu>
+  </effect>
+  <script>
+    <command reldir="extensions" interpreter="python">Heidengrave/heidengrave_prep.py</command>
+  </script>
+</inkscape-extension>
