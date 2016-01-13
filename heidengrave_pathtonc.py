@@ -18,6 +18,21 @@ def heiden_zmove( z, f ):
 def heiden_xymove( x, y, f ):
     return "L X%+4.3f Y%+4.3f R F%d M" % (x, y, f)
 
+def leftmost( path ):
+	lm = 10000
+	for element in path:
+		if element[1][0] < lm:
+			lm = element[1][0]
+	return lm
+
+def cmpPathsX( a, b ):
+	if leftmost( a ) < leftmost( b ):
+		return -1
+	elif leftmost( a ) > leftmost( b ):
+		return 1
+
+	return 0
+
 class HeidengravePathToNC( inkex.Effect ):
     def __init__( self ):
         inkex.Effect.__init__( self )
@@ -59,7 +74,7 @@ class HeidengravePathToNC( inkex.Effect ):
             paths.append( elements )
             
         return paths
-    
+
     def paths2heiden( self, paths ):
         pgms = [[heiden_begin( self.current_pgm )]]
         
@@ -91,7 +106,10 @@ class HeidengravePathToNC( inkex.Effect ):
         
         if( len( paths ) <= 0 ):
             return
-        
+        inkex.errormsg( str( self.getDocumentUnit() ) )
+
+        paths.sort( cmp=cmpPathsX )
+
         pgms = self.paths2heiden( paths )
         
         #Add line numbers
