@@ -7,6 +7,7 @@
   <param name="zsafe" type="float" min="0.0" max="100.0" precision="3" _gui-text="ZSafe">0.2</param>
   <param name="depth" type="float" min="-100.0" max="0.0" precision="3" _gui-text="Cutting depth">-0.3</param>
   <param name="feed" type="int" min="1" max="6000" _gui-text="Feed">30</param>
+  <param name="n_cuts" type="int" min="1" max="5" _gui-text="Number of cuts">3</param>
   <param name="sortby" type="optiongroup" _gui-text="Sort by">
   	<_option value="X">X</_option>
   	<_option value="Y">Y</_option>
