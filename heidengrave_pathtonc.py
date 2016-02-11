@@ -112,17 +112,13 @@ class HeidengravePathToNC( inkex.Effect ):
         return 360 * (xpos / (pxdia * math.pi))
 
 	#Convert inkscape paths to heidenhain TNC code
-    def paths2heiden( self, paths ):
+    def paths2heiden_flat( self, paths ):
         pgms = [[heiden_begin( self.current_pgm )]]
         label_no = 1
         depth = 0.0
 
 		#Initial instructions
-        if self.options.groove:
-            pgms[-1].append( "FN 0 : Q0 = %+4.3f" % (self.options.groove_offset - self.options.depth) )
-        else:
-            pgms[-1].append( "FN 0 : Q0 = 0.000" )
-
+        pgms[-1].append( "FN 0 : Q0 = 0.000" )
         pgms[-1].append( heiden_zup( self.options.zsafe ) )
         
 		#Iterate paths
@@ -131,8 +127,7 @@ class HeidengravePathToNC( inkex.Effect ):
             if self.options.n_cuts > 1:
                 pgms[-1].append( "LBL %d" % label_no )
 
-            if not self.options.groove:
-                pgms[-1].append( "FN 2 : Q0 = +Q0 - %4.3f" % ((float( self.options.depth ) * -1.0) / float( self.options.n_cuts ) ))
+            pgms[-1].append( "FN 2 : Q0 = +Q0 - %4.3f" % ((float( self.options.depth ) * -1.0) / float( self.options.n_cuts ) ))
 
 			#Rotary engrave
             if self.options.rotary:
@@ -147,20 +142,14 @@ class HeidengravePathToNC( inkex.Effect ):
                 if element[0].upper() == 'M':
                     pgms[-1].append( heiden_zup( self.options.zsafe ) )
                     pgms[-1].append( heiden_xymove( x, y, HEIDENHAIN_RAPID_FEED ) )
-
-                    if not self.options.groove:
-                        pgms[-1].append( "L Z+Q0 R F%d M" % self.options.feed )
+                    pgms[-1].append( "L Z+Q0 R F%d M" % self.options.feed )
 
 				#Ignore Z instruction
                 elif element[0].upper() == 'Z':
                     continue
 				#Lineto becomes xy move
                 elif element[0].upper() == 'L':
-                    if self.options.rotary:
-                        z = 0.4
-                        pgms[-1].append( heiden_xyzmove( x, y, z, self.options.feed ) )
-                    else:
-                        pgms[-1].append( heiden_xymove( x, y, self.options.feed ) )
+                    pgms[-1].append( heiden_xymove( x, y, self.options.feed ) )
 
 			#Add label call
             if self.options.n_cuts > 1:
@@ -190,6 +179,68 @@ class HeidengravePathToNC( inkex.Effect ):
         
         return pgms 
     
+    def paths2heiden_groove( self, paths ):
+        pgms = [[heiden_begin( self.current_pgm )]]
+        label_no = 1
+        r = self.options.groove_radius
+        y_offs = (self.uutounit( self.unittouu( self.document.getroot().get( 'height' ) ), 'mm') / 2)
+
+		#Iterate paths
+        for path in paths:
+            dcc = (abs( self.options.depth ) / self.options.n_cuts)
+
+            for cut_no in range( 1, self.options.n_cuts ):
+				#current circle center z coordinate
+                ccc = float( self.options.groove_offset - (dcc * cut_no) )
+
+				#Add circle center definition
+                pgms[-1].append( "CC Y%+4.3f Z%+4.3f" %(y_offs, ccc) )
+
+			    #Rotary engrave
+                if self.options.rotary:
+	     			#Center path over X0
+                     hcenterX( path )
+
+                prev_y = 0.0
+
+                for element in path:
+                    x = float( self.uutounit( element[1][0], 'mm' ) )
+                    y = float( self.uutounit( element[1][1], 'mm' ) )
+
+			     	#Moveto becomes zup, xy move
+                    if element[0].upper() == 'M':
+                        prev_y = y
+                        pgms[-1].append( heiden_zup( self.options.zsafe ) )
+                        pgms[-1].append( heiden_xymove( x, y, HEIDENHAIN_RAPID_FEED ) )
+                        z = round( (r * math.cos( math.asin( (y - y_offs) / r )	) - ccc ) * -1.0, 3 )
+                        pgms[-1].append( heiden_zmove( z, self.options.feed ) )
+
+				     #Ignore Z instruction
+                    elif element[0].upper() == 'Z':
+                        continue
+				     #Lineto becomes xy move
+                    elif element[0].upper() == 'L':
+                        dr = "+" if prev_y < y else "-"
+                        prev_y = y
+                        pgms[-1].append( "C Y%+4.3f X%+4.3f DR%s R F%d M" %(y, x, dr, self.options.feed) )
+
+            pgms[-1].append( heiden_zup( self.options.zsafe ) )
+			#Add stop if we are engraving a wheel
+            if self.options.rotary:
+                pgms[-1].append( "STOP M" )
+                    
+			#Switch to new program if current program exeeds 950 lines of code
+            if len( pgms[-1] ) > 950:
+                pgms[-1].append( heiden_end( self.current_pgm ) )
+                self.current_pgm += 1
+                pgms.append( [heiden_begin( self.current_pgm )] )
+                label_no = 1
+                
+		#Append program end instruction
+        pgms[-1].append( heiden_end( self.current_pgm ) )
+        
+        return pgms 
+
 	#Implementation of abstract function
     def effect( self ):
         paths = self.findPaths()
@@ -204,7 +255,10 @@ class HeidengravePathToNC( inkex.Effect ):
             for path in paths:
                 angles.append( self.pathAngle( path ) )
 
-        pgms = self.paths2heiden( paths )
+        if self.options.groove:
+            pgms = self.paths2heiden_groove( paths )
+        else:
+            pgms = self.paths2heiden_flat( paths )
         
         #Add line numbers
         for i, pgm in enumerate( pgms ):
