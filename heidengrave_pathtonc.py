@@ -136,7 +136,8 @@ class HeidengravePathToNC( inkex.Effect ):
 
             for element in path:
                 x = self.uutounit( element[1][0], 'mm' )
-                y = self.uutounit( element[1][1], 'mm' )
+                y =  (self.uutounit( self.unittouu( self.document.getroot().get(
+                    'height' ) ), 'mm') ) - (self.uutounit( element[1][1], 'mm' ) )
 
 				#Moveto becomes zup, xy move
                 if element[0].upper() == 'M':
@@ -154,7 +155,6 @@ class HeidengravePathToNC( inkex.Effect ):
 			#Add label call
             if self.options.n_cuts > 1:
                 pgms[-1].append( "FN 11 : IF +Q0 GT %+4.3f GOTO LBL %d" % (self.options.depth, label_no) )
-                #pgms[-1].append( "CALL LBL %d REP %d /%d" % (label_no, self.options.n_cuts - 1, self.options.n_cuts - 1) )
                 label_no = (label_no + 1)
 
 			#Reset Q0 between labels
@@ -201,28 +201,35 @@ class HeidengravePathToNC( inkex.Effect ):
 	     			#Center path over X0
                      hcenterX( path )
 
-                prev_y = 0.0
+                prev_angle = 270.0 
 
                 for element in path:
                     x = float( self.uutounit( element[1][0], 'mm' ) )
-                    y = float( self.uutounit( element[1][1], 'mm' ) )
+                    y =  (self.uutounit( self.unittouu( self.document.getroot().get(
+                        'height' ) ), 'mm') ) - (self.uutounit( element[1][1], 'mm' ) )
+                    #y = float( self.uutounit( element[1][1], 'mm' ) )
+                    z = round( (r * math.cos( math.asin( (y - y_offs) / r )
+                        ) - ccc ) * -1.0, 3 )
+                    angle = 270 - (math.atan( (5 - y) /
+                        (ccc - z) ) * (180 / math.pi)
+                        )
+                    dr = "+" if prev_angle < angle else "-"
+                    prev_angle = angle
 
 			     	#Moveto becomes zup, xy move
                     if element[0].upper() == 'M':
-                        prev_y = y
                         pgms[-1].append( heiden_zup( self.options.zsafe ) )
-                        pgms[-1].append( heiden_xymove( x, y, HEIDENHAIN_RAPID_FEED ) )
-                        z = round( (r * math.cos( math.asin( (y - y_offs) / r )	) - ccc ) * -1.0, 3 )
+                        pgms[-1].append( heiden_xymove( x, y, 
+                            HEIDENHAIN_RAPID_FEED ) )
                         pgms[-1].append( heiden_zmove( z, self.options.feed ) )
 
-				     #Ignore Z instruction
+				     #Ignore Z instruction element
                     elif element[0].upper() == 'Z':
                         continue
 				     #Lineto becomes xy move
                     elif element[0].upper() == 'L':
-                        dr = "+" if prev_y < y else "-"
-                        prev_y = y
-                        pgms[-1].append( "C Y%+4.3f X%+4.3f DR%s R F%d M" %(y, x, dr, self.options.feed) )
+                        pgms[-1].append( "CP PA%+4.3f X%+4.3f DR%s R F%d M"
+                                %(angle, x, dr, self.options.feed) )
 
             pgms[-1].append( heiden_zup( self.options.zsafe ) )
 			#Add stop if we are engraving a wheel
@@ -230,7 +237,7 @@ class HeidengravePathToNC( inkex.Effect ):
                 pgms[-1].append( "STOP M" )
                     
 			#Switch to new program if current program exeeds 950 lines of code
-            if len( pgms[-1] ) > 950:
+            if len( pgms[-1] ) > 940:
                 pgms[-1].append( heiden_end( self.current_pgm ) )
                 self.current_pgm += 1
                 pgms.append( [heiden_begin( self.current_pgm )] )
